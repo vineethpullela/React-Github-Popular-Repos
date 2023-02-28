@@ -19,6 +19,7 @@ class GithubPopularRepos extends Component {
     activeId: languageFiltersData[0].id,
     repositoriesData: [],
     isLoading: true,
+    isStatus: false,
   }
 
   componentDidMount() {
@@ -39,7 +40,12 @@ class GithubPopularRepos extends Component {
       forksCount: each.forks_count,
       issuesCount: each.issues_count,
     }))
-    this.setState({repositoriesData: updatedData, isLoading: false})
+    console.log(response)
+    if (response.ok === true) {
+      this.setState({repositoriesData: updatedData, isLoading: false})
+    } else {
+      this.setState({isStatus: true})
+    }
   }
 
   selectedLanguage = id => {
@@ -76,17 +82,29 @@ class GithubPopularRepos extends Component {
   }
 
   renderLoader = () => (
-    <div>
+    <div data-testid="loader">
       <Loader color="#0284c7" height={80} type="ThreeDots" width={80} />
     </div>
   )
 
+  renderFailureView = () => (
+    <div className="failure-container">
+      <img
+        className="failure-img"
+        src="https://assets.ccbp.in/frontend/react-js/api-failure-view.png"
+        alt="failure view"
+      />
+      <h1 className="failure-heading">Something Went Wrong</h1>
+    </div>
+  )
+
   render() {
-    const {isLoading} = this.state
+    const {isLoading, isStatus} = this.state
     return (
       <div className="bg-container">
         <h1 className="main-heading">Popular</h1>
         {this.renderLanguageFiltersList()}
+        {isStatus && this.renderFailureView()}
 
         {isLoading ? this.renderLoader() : this.renderRepositoriesList()}
       </div>

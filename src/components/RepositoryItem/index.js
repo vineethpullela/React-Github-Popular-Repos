@@ -31,7 +31,7 @@ const RepositoryItem = props => {
         <img
           className="stats-icon"
           src="https://assets.ccbp.in/frontend/react-js/issues-count-img.png"
-          alt="open-issues"
+          alt="open issues"
         />
         <p className="stats-text">{repositoryData.issuesCount} open issues</p>
       </div>
