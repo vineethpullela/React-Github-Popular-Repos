@@ -6,6 +6,13 @@ import RepositoryItem from '../RepositoryItem'
 
 import './index.css'
 
+const apiStatusConstants = {
+  initial: 'INITIAL',
+  success: 'SUCCESS',
+  failure: 'FAILURE',
+  inProgress: 'IN_PROGRESS',
+}
+
 const languageFiltersData = [
   {id: 'ALL', language: 'All'},
   {id: 'JAVASCRIPT', language: 'Javascript'},
@@ -16,97 +23,119 @@ const languageFiltersData = [
 
 class GithubPopularRepos extends Component {
   state = {
-    activeId: languageFiltersData[0].id,
+    apiStatus: apiStatusConstants.initial,
     repositoriesData: [],
-    isLoading: true,
-    isStatus: false,
+    activeLanguageFilterId: languageFiltersData[0].id,
   }
 
   componentDidMount() {
-    this.getRepositoriesData()
+    this.getRepositories()
   }
 
-  getRepositoriesData = async () => {
-    const {activeId} = this.state
-    const response = await fetch(
-      `https://apis.ccbp.in/popular-repos?language=${activeId}`,
-    )
-    const fetchedData = await response.json()
-    const updatedData = fetchedData.popular_repos.map(each => ({
-      id: each.id,
-      imageUrl: each.avatar_url,
-      name: each.name,
-      starsCount: each.stars_count,
-      forksCount: each.forks_count,
-      issuesCount: each.issues_count,
-    }))
-    console.log(response)
-    if (response.ok === true) {
-      this.setState({repositoriesData: updatedData, isLoading: false})
+  getRepositories = async () => {
+    const {activeLanguageFilterId} = this.state
+    this.setState({
+      apiStatus: apiStatusConstants.inProgress,
+    })
+    const apiUrl = `https://apis.ccbp.in/popular-repos?language=${activeLanguageFilterId}`
+    const response = await fetch(apiUrl)
+    if (response.ok) {
+      const fetchedData = await response.json()
+      const updatedData = fetchedData.popular_repos.map(eachRepository => ({
+        id: eachRepository.id,
+        imageUrl: eachRepository.avatar_url,
+        name: eachRepository.name,
+        starsCount: eachRepository.stars_count,
+        forksCount: eachRepository.forks_count,
+        issuesCount: eachRepository.issues_count,
+      }))
+      this.setState({
+        repositoriesData: updatedData,
+        apiStatus: apiStatusConstants.success,
+      })
     } else {
-      this.setState({isStatus: true})
+      this.setState({
+        apiStatus: apiStatusConstants.failure,
+      })
     }
   }
 
-  selectedLanguage = id => {
-    this.setState({activeId: id}, this.getRepositoriesData)
-  }
-
-  renderLanguageFiltersList = () => {
-    const {activeId} = this.state
-
-    return (
-      <ul className="tabs-container">
-        {languageFiltersData.map(eachLanguage => (
-          <LanguageFilterItem
-            isSelected={eachLanguage.id === activeId}
-            key={eachLanguage.id}
-            languageFiltersData={eachLanguage}
-            selectedLanguage={this.selectedLanguage}
-          />
-        ))}
-      </ul>
-    )
-  }
-
-  renderRepositoriesList = () => {
-    const {repositoriesData} = this.state
-
-    return (
-      <ul className="card-items-list-container">
-        {repositoriesData.map(data => (
-          <RepositoryItem key={data.id} repositoryData={data} />
-        ))}
-      </ul>
-    )
-  }
-
-  renderLoader = () => (
+  renderLoadingView = () => (
     <div data-testid="loader">
       <Loader color="#0284c7" height={80} type="ThreeDots" width={80} />
     </div>
   )
 
   renderFailureView = () => (
-    <div className="failure-container">
+    <div className="failure-view-container">
       <img
-        className="failure-img"
         src="https://assets.ccbp.in/frontend/react-js/api-failure-view.png"
         alt="failure view"
+        className="failure-view-image"
       />
-      <h1 className="failure-heading">Something Went Wrong</h1>
+      <h1 className="error-message">Something Went Wrong</h1>
     </div>
   )
 
-  render() {
-    const {isLoading, isStatus} = this.state
-    return (
-      <div className="bg-container">
-        <h1 className="main-heading">Popular</h1>
-        {this.renderLanguageFiltersList()}
-        {isStatus && this.renderFailureView()}
+  renderRepositoriesListView = () => {
+    const {repositoriesData} = this.state
 
-        {isLoading ? this.renderLoader() : this.renderRepositoriesList()}
+    return (
+      <ul className="repositories-list">
+        {repositoriesData.map(eachRepository => (
+          <RepositoryItem
+            key={eachRepository.id}
+            repositoryDetails={eachRepository}
+          />
+        ))}
+      </ul>
+    )
+  }
+
+  renderRepositories = () => {
+    const {apiStatus} = this.state
+
+    switch (apiStatus) {
+      case apiStatusConstants.success:
+        return this.renderRepositoriesListView()
+      case apiStatusConstants.failure:
+        return this.renderFailureView()
+      case apiStatusConstants.inProgress:
+        return this.renderLoadingView()
+      default:
+        return null
+    }
+  }
+
+  setActiveLanguageFilterId = newFilterId => {
+    this.setState({activeLanguageFilterId: newFilterId}, this.getRepositories)
+  }
+
+  renderLanguageFiltersList = () => {
+    const {activeLanguageFilterId} = this.state
+
+    return (
+      <ul className="filters-list">
+        {languageFiltersData.map(eachLanguageFilter => (
+          <LanguageFilterItem
+            key={eachLanguageFilter.id}
+            isActive={eachLanguageFilter.id === activeLanguageFilterId}
+            languageFilterDetails={eachLanguageFilter}
+            setActiveLanguageFilterId={this.setActiveLanguageFilterId}
+          />
+        ))}
+      </ul>
+    )
+  }
+
+  render() {
+    return (
+      <div className="app-container">
+        <div className="responsive-container">
+          <h1 className="heading">Popular</h1>
+          {this.renderLanguageFiltersList()}
+          {this.renderRepositories()}
+        </div>
       </div>
     )
   }
